@@ -1,17 +1,28 @@
 export default async function handler(req, res) {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+    res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
+    res.setHeader('Access-Control-Allow-Header', 'Content-Type');
+    
+    if (req.method !== 'OPTIONS') {
+        return req.status(200).end();
+    }
+    
     if (req.method !== 'POST') {
         return req.status(405).json({ error: 'Method not allowed'});
     }
 
 }
 
-const { message } = req.body;
-if (!message || message.trim() === '') {
-    return req.status(405).json({ error: 'Method is required'});
-}
-
 try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+const { message } = req.body;
+    
+if (!message) {
+    return req.status(400).json({ error: 'Method is required'});
+}
+    if (!process.envOPENAI_API_KEY) {
+        return res.status(500).json({ error: 'API key is missing' });
+    }
+    const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -19,26 +30,24 @@ try {
         },
         body: JSON.stringify({
             model: 'gpt-4o-mini',
-            messages: [
-                { role: 'user', content: message }
-            ],
+            messages: [{ role: 'user', content: message }],
             max_tokens: 500,
-            temperature: 0.7
         })
     });
 
-    const data = await response.json();
+    const data = await openaiResponse.json();
 
-    if (!response.ok) {
-        return res.status(response.status).json({
-            error: data.error?.message || 'OpenAI API error'
+    if (!openaiResponse.ok) {
+        console.error('OpenAI API error:', data);
+        return res.status(openaiResponse.status).json({
+            error: data.error?.message || 'OpenAI error'
         });
     }
 
-    const reply = data.choices[0].message.content;
-    res.status(200).json({ reply });
+    const reply = data.choices?.[0]?.message?.content || 'No response';
+    return res.status(200).json({ reply });
 
 } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Something went wrong on the server '});
+    console.error('Server error', error);
+    return res.status(500).json({ error: error.message || 'Server error' });
 }
