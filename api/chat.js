@@ -1,4 +1,4 @@
-export default async function handler(req, res) {
+model.export = async function handler(req, res) {
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Header', 'Content-Type');
@@ -19,7 +19,7 @@ const { message } = req.body;
 if (!message) {
     return req.status(400).json({ error: 'Method is required'});
 }
-    if (!process.envOPENAI_API_KEY) {
+    if (!process.env.OPENAI_API_KEY) {
         return res.status(500).json({ error: 'API key is missing' });
     }
     const openaiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -38,7 +38,7 @@ if (!message) {
     const data = await openaiResponse.json();
 
     if (!openaiResponse.ok) {
-        console.error('OpenAI API error:', data);
+        console.error('OpenAI error:', data);
         return res.status(openaiResponse.status).json({
             error: data.error?.message || 'OpenAI error'
         });
